@@ -11,7 +11,13 @@ class DatabaseService {
   static final DatabaseService instance = DatabaseService._init();
   DatabaseService._init();
 
-  String get _uid => FirebaseAuth.instance.currentUser!.uid;
+  bool get _isAuthenticated => FirebaseAuth.instance.currentUser != null;
+
+  String get _uid {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw StateError('User not authenticated');
+    return user.uid;
+  }
 
   CollectionReference _col(String name) =>
       FirebaseFirestore.instance.collection('users').doc(_uid).collection(name);
@@ -21,10 +27,12 @@ class DatabaseService {
 
   // --- User Profile ---
   Future<void> saveUserProfile(UserProfile profile) async {
+    if (!_isAuthenticated) return;
     await _profileDoc.set({'profile': profile.toMap()}, SetOptions(merge: true));
   }
 
   Future<UserProfile?> getUserProfile() async {
+    if (!_isAuthenticated) return null;
     final doc = await _profileDoc.get();
     if (!doc.exists) return null;
     final data = doc.data() as Map<String, dynamic>?;
@@ -33,6 +41,7 @@ class DatabaseService {
   }
 
   Future<bool> hasProfile() async {
+    if (!_isAuthenticated) return false;
     final doc = await _profileDoc.get();
     if (!doc.exists) return false;
     final data = doc.data() as Map<String, dynamic>?;
@@ -41,11 +50,13 @@ class DatabaseService {
 
   // --- Meals ---
   Future<String> insertMeal(Meal meal) async {
+    if (!_isAuthenticated) return '';
     final doc = await _col('meals').add(meal.toMap());
     return doc.id;
   }
 
   Future<List<Meal>> getMealsByDate(DateTime date) async {
+    if (!_isAuthenticated) return [];
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
     final snapshot = await _col('meals')
@@ -59,6 +70,7 @@ class DatabaseService {
   }
 
   Future<List<Meal>> getAllMeals() async {
+    if (!_isAuthenticated) return [];
     final snapshot =
         await _col('meals').orderBy('dateTime', descending: true).get();
     return snapshot.docs
@@ -67,16 +79,27 @@ class DatabaseService {
   }
 
   Future<void> deleteMeal(String id) async {
+    if (!_isAuthenticated) return;
     await _col('meals').doc(id).delete();
   }
 
   Future<int> getTotalCaloriesByDate(DateTime date) async {
     final meals = await getMealsByDate(date);
-    return meals.fold<int>(0, (sum, meal) => sum + meal.calories);
+    return meals.fold<int>(0, (total, meal) => total + meal.calories);
   }
 
   Future<List<Map<String, dynamic>>> getWeeklyCalories() async {
     final now = DateTime.now();
+    if (!_isAuthenticated) {
+      final Map<String, int> dailyCalories = {};
+      for (int i = 0; i < 7; i++) {
+        final day = now.subtract(Duration(days: 6 - i));
+        dailyCalories['${day.day}/${day.month}'] = 0;
+      }
+      return dailyCalories.entries
+          .map((e) => {'date': e.key, 'calories': e.value})
+          .toList();
+    }
     final weekAgo = DateTime(now.year, now.month, now.day)
         .subtract(const Duration(days: 6));
     final snapshot = await _col('meals')
@@ -105,11 +128,13 @@ class DatabaseService {
 
   // --- Water ---
   Future<String> insertWaterIntake(WaterIntake water) async {
+    if (!_isAuthenticated) return '';
     final doc = await _col('water').add(water.toMap());
     return doc.id;
   }
 
   Future<List<WaterIntake>> getWaterIntakeByDate(DateTime date) async {
+    if (!_isAuthenticated) return [];
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
     final snapshot = await _col('water')
@@ -125,20 +150,23 @@ class DatabaseService {
 
   Future<int> getTotalWaterByDate(DateTime date) async {
     final list = await getWaterIntakeByDate(date);
-    return list.fold<int>(0, (sum, w) => sum + w.amount);
+    return list.fold<int>(0, (total, w) => total + w.amount);
   }
 
   Future<void> deleteWaterIntake(String id) async {
+    if (!_isAuthenticated) return;
     await _col('water').doc(id).delete();
   }
 
   // --- Exercise ---
   Future<String> insertExercise(Exercise exercise) async {
+    if (!_isAuthenticated) return '';
     final doc = await _col('exercises').add(exercise.toMap());
     return doc.id;
   }
 
   Future<List<Exercise>> getExercisesByDate(DateTime date) async {
+    if (!_isAuthenticated) return [];
     final startOfDay = DateTime(date.year, date.month, date.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
     final snapshot = await _col('exercises')
@@ -154,20 +182,23 @@ class DatabaseService {
 
   Future<int> getTotalCaloriesBurnedByDate(DateTime date) async {
     final list = await getExercisesByDate(date);
-    return list.fold<int>(0, (sum, e) => sum + e.caloriesBurned);
+    return list.fold<int>(0, (total, e) => total + e.caloriesBurned);
   }
 
   Future<void> deleteExercise(String id) async {
+    if (!_isAuthenticated) return;
     await _col('exercises').doc(id).delete();
   }
 
   // --- Sleep ---
   Future<String> insertSleepRecord(SleepRecord record) async {
+    if (!_isAuthenticated) return '';
     final doc = await _col('sleep_records').add(record.toMap());
     return doc.id;
   }
 
   Future<List<SleepRecord>> getSleepRecords({int limit = 30}) async {
+    if (!_isAuthenticated) return [];
     final snapshot = await _col('sleep_records')
         .orderBy('bedTime', descending: true)
         .limit(limit)
@@ -184,16 +215,19 @@ class DatabaseService {
   }
 
   Future<void> deleteSleepRecord(String id) async {
+    if (!_isAuthenticated) return;
     await _col('sleep_records').doc(id).delete();
   }
 
   // --- Habits ---
   Future<String> insertHabit(Habit habit) async {
+    if (!_isAuthenticated) return '';
     final doc = await _col('habits').add(habit.toMap());
     return doc.id;
   }
 
   Future<List<Habit>> getHabits() async {
+    if (!_isAuthenticated) return [];
     final habitsSnap =
         await _col('habits').orderBy('createdAt').get();
     final completionsSnap = await _col('habit_completions').get();
@@ -218,6 +252,7 @@ class DatabaseService {
   }
 
   Future<void> toggleHabitCompletion(String habitId, DateTime date) async {
+    if (!_isAuthenticated) return;
     final dateOnly = DateTime(date.year, date.month, date.day);
     final snapshot = await _col('habit_completions')
         .where('habitId', isEqualTo: habitId)
@@ -237,6 +272,7 @@ class DatabaseService {
   }
 
   Future<void> deleteHabit(String id) async {
+    if (!_isAuthenticated) return;
     // Delete completions for this habit
     final completions = await _col('habit_completions')
         .where('habitId', isEqualTo: id)

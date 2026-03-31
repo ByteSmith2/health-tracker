@@ -22,8 +22,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadProfile() async {
-    final profile = await DatabaseService.instance.getUserProfile();
-    setState(() => _profile = profile);
+    try {
+      final profile = await DatabaseService.instance.getUserProfile();
+      if (!mounted) return;
+      setState(() => _profile = profile);
+    } catch (e) {
+      debugPrint('Error loading profile: $e');
+    }
   }
 
   @override

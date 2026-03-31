@@ -29,42 +29,47 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   }
 
   Future<void> _loadData() async {
-    final calories = await _db.getTotalCaloriesByDate(DateTime.now());
-    final burned = await _db.getTotalCaloriesBurnedByDate(DateTime.now());
-    final water = await _db.getTotalWaterByDate(DateTime.now());
-    final sleep = await _db.getLatestSleepRecord();
-    final exercises = await _db.getExercisesByDate(DateTime.now());
-    final habits = await _db.getHabits();
-    final weeklyData = await _db.getWeeklyCalories();
-    final profile = await _db.getUserProfile();
+    try {
+      final calories = await _db.getTotalCaloriesByDate(DateTime.now());
+      final burned = await _db.getTotalCaloriesBurnedByDate(DateTime.now());
+      final water = await _db.getTotalWaterByDate(DateTime.now());
+      final sleep = await _db.getLatestSleepRecord();
+      final exercises = await _db.getExercisesByDate(DateTime.now());
+      final habits = await _db.getHabits();
+      final weeklyData = await _db.getWeeklyCalories();
+      final profile = await _db.getUserProfile();
 
-    final sleepHours = sleep?.duration.inMinutes != null
-        ? sleep!.duration.inMinutes / 60.0
-        : null;
-    final totalHabits = habits.length;
-    final completedHabits = habits.where((h) => h.isCompletedToday).length;
-    final habitRatio = totalHabits > 0 ? completedHabits / totalHabits : 0.0;
+      final sleepHours = sleep?.duration.inMinutes != null
+          ? sleep!.duration.inMinutes / 60.0
+          : null;
+      final totalHabits = habits.length;
+      final completedHabits = habits.where((h) => h.isCompletedToday).length;
+      final habitRatio = totalHabits > 0 ? completedHabits / totalHabits : 0.0;
 
-    final analysis = _ai.getComprehensiveAnalysis(
-      profile: profile,
-      caloriesConsumed: calories,
-      caloriesBurned: burned > 0 ? burned : 1800,
-      waterMl: water,
-      waterGoal: AppConstants.defaultWaterGoal,
-      sleepHours: sleepHours,
-      sleepQuality: sleep?.qualityRating,
-      habitsCompletedRatio: habitRatio,
-      exerciseMinutes: exercises.fold<int>(0, (s, e) => s + e.durationMinutes),
-    );
+      final analysis = _ai.getComprehensiveAnalysis(
+        profile: profile,
+        caloriesConsumed: calories,
+        caloriesBurned: burned > 0 ? burned : 1800,
+        waterMl: water,
+        waterGoal: AppConstants.defaultWaterGoal,
+        sleepHours: sleepHours,
+        sleepQuality: sleep?.qualityRating,
+        habitsCompletedRatio: habitRatio,
+        exerciseMinutes: exercises.fold<int>(0, (s, e) => s + e.durationMinutes),
+      );
 
-    setState(() {
-      _todayCalories = calories;
-      _todayBurned = burned > 0 ? burned : 1800;
-      _todayWater = water;
-      _lastSleepHours = sleepHours;
-      _weeklyData = weeklyData;
-      _analysis = analysis;
-    });
+      if (!mounted) return;
+      setState(() {
+        _todayCalories = calories;
+        _todayBurned = burned > 0 ? burned : 1800;
+        _todayWater = water;
+        _lastSleepHours = sleepHours;
+        _weeklyData = weeklyData;
+        _analysis = analysis;
+      });
+    } catch (e) {
+      debugPrint('Error loading analysis data: $e');
+    }
   }
 
   Color _getStatusColor(String? colorName) {

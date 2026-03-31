@@ -21,8 +21,13 @@ class _HabitScreenState extends State<HabitScreen> {
   }
 
   Future<void> _loadHabits() async {
-    final habits = await _db.getHabits();
-    setState(() => _habits = habits);
+    try {
+      final habits = await _db.getHabits();
+      if (!mounted) return;
+      setState(() => _habits = habits);
+    } catch (e) {
+      debugPrint('Error loading habits: $e');
+    }
   }
 
   IconData _getIconData(String iconName) {

@@ -13,9 +13,40 @@ import 'screens/onboarding_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await FirebaseAuth.instance.signInAnonymously();
+
+  // Sign in anonymously and wait for auth state to be ready
+  try {
+    final userCredential = await FirebaseAuth.instance.signInAnonymously();
+    if (userCredential.user == null) {
+      debugPrint('Firebase auth: user is null after sign in');
+    }
+  } catch (e) {
+    debugPrint('Firebase auth error: $e');
+    // Retry once after a short delay
+    try {
+      await Future.delayed(const Duration(seconds: 2));
+      await FirebaseAuth.instance.signInAnonymously();
+    } catch (e2) {
+      debugPrint('Firebase auth retry failed: $e2');
+    }
+  }
+
+  // Wait until currentUser is available
+  if (FirebaseAuth.instance.currentUser == null) {
+    await FirebaseAuth.instance.authStateChanges().firstWhere((user) => user != null)
+        .timeout(const Duration(seconds: 5), onTimeout: () => null);
+  }
+
   await initializeDateFormatting('vi', null);
-  final hasProfile = await DatabaseService.instance.hasProfile();
+
+  bool hasProfile = false;
+  if (FirebaseAuth.instance.currentUser != null) {
+    try {
+      hasProfile = await DatabaseService.instance.hasProfile();
+    } catch (e) {
+      debugPrint('Profile check error: $e');
+    }
+  }
 
   runApp(HealthTrackerApp(showOnboarding: !hasProfile));
 }

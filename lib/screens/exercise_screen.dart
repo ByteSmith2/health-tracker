@@ -27,14 +27,19 @@ class _ExerciseScreenState extends State<ExerciseScreen> {
   }
 
   Future<void> _loadData() async {
-    final exercises = await _db.getExercisesByDate(DateTime.now());
-    final profile = await _db.getUserProfile();
-    setState(() {
-      _todayExercises = exercises;
-      _totalBurned = exercises.fold<int>(0, (s, e) => s + e.caloriesBurned);
-      _totalMinutes = exercises.fold<int>(0, (s, e) => s + e.durationMinutes);
-      _profile = profile;
-    });
+    try {
+      final exercises = await _db.getExercisesByDate(DateTime.now());
+      final profile = await _db.getUserProfile();
+      if (!mounted) return;
+      setState(() {
+        _todayExercises = exercises;
+        _totalBurned = exercises.fold<int>(0, (s, e) => s + e.caloriesBurned);
+        _totalMinutes = exercises.fold<int>(0, (s, e) => s + e.durationMinutes);
+        _profile = profile;
+      });
+    } catch (e) {
+      debugPrint('Error loading exercises: $e');
+    }
   }
 
   void _showAddExercise() {

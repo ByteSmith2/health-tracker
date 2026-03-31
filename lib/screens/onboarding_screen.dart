@@ -23,6 +23,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   double _weight = 60;
   int _birthYear = 2000;
   String _activityLevel = 'light';
+  bool _isSaving = false;
 
   @override
   void dispose() {
@@ -61,8 +62,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Future<void> _finish() async {
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
+
     final profile = _buildProfile();
-    await DatabaseService.instance.saveUserProfile(profile);
+    try {
+      await DatabaseService.instance.saveUserProfile(profile)
+          .timeout(const Duration(seconds: 5));
+    } catch (e) {
+      debugPrint('Save profile error: $e');
+    }
+
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -130,9 +140,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     )
                   else
                     FilledButton.icon(
-                      onPressed: _finish,
-                      icon: const Icon(Icons.check),
-                      label: const Text('Bắt đầu'),
+                      onPressed: _isSaving ? null : _finish,
+                      icon: _isSaving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.check),
+                      label: Text(_isSaving ? 'Đang lưu...' : 'Bắt đầu'),
                     ),
                 ],
               ),
@@ -233,7 +252,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Text('Năm sinh', style: theme.textTheme.titleSmall),
           const SizedBox(height: 8),
           DropdownButtonFormField<int>(
-            value: _birthYear,
+            initialValue: _birthYear,
             decoration: const InputDecoration(
               prefixIcon: Icon(Icons.cake),
             ),
@@ -282,19 +301,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           const SizedBox(height: 16),
           Text('Mức độ vận động', style: theme.textTheme.titleSmall),
           const SizedBox(height: 8),
-          ...[
-            ('sedentary', 'Ít vận động', 'Ngồi văn phòng cả ngày'),
-            ('light', 'Vận động nhẹ', 'Tập 1-3 lần/tuần'),
-            ('moderate', 'Vận động vừa', 'Tập 3-5 lần/tuần'),
-            ('active', 'Vận động nhiều', 'Tập 6-7 lần/tuần'),
-          ].map((item) => RadioListTile<String>(
-                value: item.$1,
-                groupValue: _activityLevel,
-                title: Text(item.$2),
-                subtitle: Text(item.$3),
-                onChanged: (v) => setState(() => _activityLevel = v!),
-                contentPadding: EdgeInsets.zero,
-              )),
+          RadioGroup<String>(
+            groupValue: _activityLevel,
+            onChanged: (v) => setState(() => _activityLevel = v!),
+            child: Column(
+              children: [
+                ('sedentary', 'Ít vận động', 'Ngồi văn phòng cả ngày'),
+                ('light', 'Vận động nhẹ', 'Tập 1-3 lần/tuần'),
+                ('moderate', 'Vận động vừa', 'Tập 3-5 lần/tuần'),
+                ('active', 'Vận động nhiều', 'Tập 6-7 lần/tuần'),
+              ].map((item) => RadioListTile<String>(
+                    value: item.$1,
+                    title: Text(item.$2),
+                    subtitle: Text(item.$3),
+                    contentPadding: EdgeInsets.zero,
+                  )).toList(),
+            ),
+          ),
         ],
       ),
     );

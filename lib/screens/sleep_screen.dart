@@ -22,8 +22,13 @@ class _SleepScreenState extends State<SleepScreen> {
   }
 
   Future<void> _loadRecords() async {
-    final records = await _db.getSleepRecords();
-    setState(() => _records = records);
+    try {
+      final records = await _db.getSleepRecords();
+      if (!mounted) return;
+      setState(() => _records = records);
+    } catch (e) {
+      debugPrint('Error loading sleep records: $e');
+    }
   }
 
   Future<void> _addSleepRecord() async {

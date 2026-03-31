@@ -35,58 +35,63 @@ class _StatisticsScreenState extends State<StatisticsScreen>
   }
 
   Future<void> _loadData() async {
-    final db = DatabaseService.instance;
-    final weeklyCalories = await db.getWeeklyCalories();
-    final allMeals = await db.getAllMeals();
-    final sleepRecords = await db.getSleepRecords(limit: 7);
+    try {
+      final db = DatabaseService.instance;
+      final weeklyCalories = await db.getWeeklyCalories();
+      final allMeals = await db.getAllMeals();
+      final sleepRecords = await db.getSleepRecords(limit: 7);
 
-    // Calculate averages
-    final calValues = weeklyCalories
-        .map((d) => d['calories'] as int)
-        .where((c) => c > 0)
-        .toList();
-    final avgCal =
-        calValues.isNotEmpty ? calValues.reduce((a, b) => a + b) ~/ calValues.length : 0;
+      // Calculate averages
+      final calValues = weeklyCalories
+          .map((d) => d['calories'] as int)
+          .where((c) => c > 0)
+          .toList();
+      final avgCal =
+          calValues.isNotEmpty ? calValues.reduce((a, b) => a + b) ~/ calValues.length : 0;
 
-    double avgSleep = 0;
-    if (sleepRecords.isNotEmpty) {
-      final totalMin =
-          sleepRecords.fold<int>(0, (s, r) => s + r.duration.inMinutes);
-      avgSleep = totalMin / sleepRecords.length / 60.0;
-    }
-
-    // Exercise stats for this week
-    int totalExMin = 0;
-    int totalBurned = 0;
-    final now = DateTime.now();
-    for (int i = 0; i < 7; i++) {
-      final day = now.subtract(Duration(days: i));
-      final exercises = await db.getExercisesByDate(day);
-      totalExMin += exercises.fold<int>(0, (s, e) => s + e.durationMinutes);
-      totalBurned += exercises.fold<int>(0, (s, e) => s + e.caloriesBurned);
-    }
-
-    // Water stats
-    int totalWater = 0;
-    int waterDays = 0;
-    for (int i = 0; i < 7; i++) {
-      final day = now.subtract(Duration(days: i));
-      final w = await db.getTotalWaterByDate(day);
-      if (w > 0) {
-        totalWater += w;
-        waterDays++;
+      double avgSleep = 0;
+      if (sleepRecords.isNotEmpty) {
+        final totalMin =
+            sleepRecords.fold<int>(0, (s, r) => s + r.duration.inMinutes);
+        avgSleep = totalMin / sleepRecords.length / 60.0;
       }
-    }
 
-    setState(() {
-      _weeklyCalories = weeklyCalories;
-      _avgCalories = avgCal;
-      _totalMeals = allMeals.length;
-      _avgSleep = avgSleep;
-      _totalExerciseMin = totalExMin;
-      _totalCalBurned = totalBurned;
-      _avgWater = waterDays > 0 ? totalWater ~/ waterDays : 0;
-    });
+      // Exercise stats for this week
+      int totalExMin = 0;
+      int totalBurned = 0;
+      final now = DateTime.now();
+      for (int i = 0; i < 7; i++) {
+        final day = now.subtract(Duration(days: i));
+        final exercises = await db.getExercisesByDate(day);
+        totalExMin += exercises.fold<int>(0, (s, e) => s + e.durationMinutes);
+        totalBurned += exercises.fold<int>(0, (s, e) => s + e.caloriesBurned);
+      }
+
+      // Water stats
+      int totalWater = 0;
+      int waterDays = 0;
+      for (int i = 0; i < 7; i++) {
+        final day = now.subtract(Duration(days: i));
+        final w = await db.getTotalWaterByDate(day);
+        if (w > 0) {
+          totalWater += w;
+          waterDays++;
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _weeklyCalories = weeklyCalories;
+        _avgCalories = avgCal;
+        _totalMeals = allMeals.length;
+        _avgSleep = avgSleep;
+        _totalExerciseMin = totalExMin;
+        _totalCalBurned = totalBurned;
+        _avgWater = waterDays > 0 ? totalWater ~/ waterDays : 0;
+      });
+    } catch (e) {
+      debugPrint('Error loading statistics: $e');
+    }
   }
 
   @override

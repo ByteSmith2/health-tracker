@@ -25,19 +25,28 @@ class _WaterScreenState extends State<WaterScreen> {
   }
 
   Future<void> _loadData() async {
-    final intakes = await _db.getWaterIntakeByDate(DateTime.now());
-    final total = await _db.getTotalWaterByDate(DateTime.now());
-    setState(() {
-      _todayIntakes = intakes;
-      _totalMl = total;
-    });
+    try {
+      final intakes = await _db.getWaterIntakeByDate(DateTime.now());
+      final total = await _db.getTotalWaterByDate(DateTime.now());
+      if (!mounted) return;
+      setState(() {
+        _todayIntakes = intakes;
+        _totalMl = total;
+      });
+    } catch (e) {
+      debugPrint('Error loading water data: $e');
+    }
   }
 
   Future<void> _addWater(int ml) async {
-    await _db.insertWaterIntake(
-      WaterIntake(amount: ml, dateTime: DateTime.now()),
-    );
-    _loadData();
+    try {
+      await _db.insertWaterIntake(
+        WaterIntake(amount: ml, dateTime: DateTime.now()),
+      );
+      _loadData();
+    } catch (e) {
+      debugPrint('Error adding water: $e');
+    }
   }
 
   @override

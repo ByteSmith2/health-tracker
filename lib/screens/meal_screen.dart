@@ -30,11 +30,16 @@ class _MealScreenState extends State<MealScreen> {
   }
 
   Future<void> _loadMeals() async {
-    final meals = await _db.getMealsByDate(DateTime.now());
-    setState(() {
-      _todayMeals = meals;
-      _totalCalories = meals.fold(0, (sum, m) => sum + m.calories);
-    });
+    try {
+      final meals = await _db.getMealsByDate(DateTime.now());
+      if (!mounted) return;
+      setState(() {
+        _todayMeals = meals;
+        _totalCalories = meals.fold(0, (sum, m) => sum + m.calories);
+      });
+    } catch (e) {
+      debugPrint('Error loading meals: $e');
+    }
   }
 
   Future<void> _pickImage(ImageSource source) async {

@@ -101,7 +101,7 @@ class AIService {
     if (balance > 500) {
       overallStatus = 'Dư thừa calo';
       statusColor = 'red';
-      dietAdvice = 'Bạn đang nạp nhiều hơn ${balance} calo so với mức tiêu thụ. '
+      dietAdvice = 'Bạn đang nạp nhiều hơn $balance calo so với mức tiêu thụ. '
           'Hãy giảm phần ăn, tăng rau xanh và protein nạc. Tránh đồ chiên rán và nước ngọt.';
       exerciseAdvice = 'Nên tập thêm 30-45 phút cardio (chạy bộ, đạp xe, bơi lội). '
           'Kết hợp HIIT để đốt cháy calo hiệu quả hơn.';

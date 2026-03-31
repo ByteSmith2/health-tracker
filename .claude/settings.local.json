@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la 'D:\\\\TH-PTUD\\\\New folder \\(2\\)\\\\health_tracker')",
+      "Bash(find \"D:\\\\TH-PTUD\\\\New folder \\(2\\)\\\\health_tracker/lib\" -type f -name \"*.dart\")",
+      "Bash(find \"D:\\\\TH-PTUD\\\\New folder \\(2\\)\\\\health_tracker/android\" -type f -name \"*.xml\" -o -name \"*.gradle\")",
+      "Bash(cat:*)",
+      "Bash(find \"D:\\\\TH-PTUD\\\\New folder \\(2\\)\\\\health_tracker/lib\" -maxdepth 2 -type d)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(flutter build:*)",
+      "Bash(flutter devices:*)",
+      "Bash(flutter emulators:*)",
+      "Bash(adb wait-for-device:*)",
+      "Bash(adb shell:*)",
+      "Bash(flutter run:*)",
+      "Bash(keytool -list -v -keystore \"%USERPROFILE%\\\\.android\\\\debug.keystore\" -alias androiddebugkey -storepass android -keypass android)",
+      "Bash(keytool:*)",
+      "Bash(firebase:*)",
+      "Bash(gcloud services:*)"
+    ]
+  }
+}

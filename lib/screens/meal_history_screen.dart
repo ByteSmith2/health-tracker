@@ -20,8 +20,13 @@ class _MealHistoryScreenState extends State<MealHistoryScreen> {
   }
 
   Future<void> _loadMeals() async {
-    final meals = await DatabaseService.instance.getAllMeals();
-    setState(() => _meals = meals);
+    try {
+      final meals = await DatabaseService.instance.getAllMeals();
+      if (!mounted) return;
+      setState(() => _meals = meals);
+    } catch (e) {
+      debugPrint('Error loading meal history: $e');
+    }
   }
 
   @override

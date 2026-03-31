@@ -56,30 +56,35 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Future<void> _loadDashboardData() async {
-    final db = DatabaseService.instance;
-    final calories = await db.getTotalCaloriesByDate(DateTime.now());
-    final water = await db.getTotalWaterByDate(DateTime.now());
-    final burned = await db.getTotalCaloriesBurnedByDate(DateTime.now());
-    final sleep = await db.getLatestSleepRecord();
-    final habits = await db.getHabits();
-    final exercises = await db.getExercisesByDate(DateTime.now());
-    final profile = await db.getUserProfile();
+    try {
+      final db = DatabaseService.instance;
+      final calories = await db.getTotalCaloriesByDate(DateTime.now());
+      final water = await db.getTotalWaterByDate(DateTime.now());
+      final burned = await db.getTotalCaloriesBurnedByDate(DateTime.now());
+      final sleep = await db.getLatestSleepRecord();
+      final habits = await db.getHabits();
+      final exercises = await db.getExercisesByDate(DateTime.now());
+      final profile = await db.getUserProfile();
 
-    setState(() {
-      _todayCalories = calories;
-      _todayWater = water;
-      _todayBurned = burned;
-      _lastSleepHours = sleep?.duration.inMinutes != null
-          ? sleep!.duration.inMinutes / 60.0
-          : null;
-      _totalHabits = habits.length;
-      _habitsCompleted = habits.where((h) => h.isCompletedToday).length;
-      _exerciseMinutes =
-          exercises.fold<int>(0, (s, e) => s + e.durationMinutes);
-      _profile = profile;
-      _calorieGoal = profile?.recommendedCalories ?? 2000;
-    });
-    _animController.forward(from: 0);
+      if (!mounted) return;
+      setState(() {
+        _todayCalories = calories;
+        _todayWater = water;
+        _todayBurned = burned;
+        _lastSleepHours = sleep?.duration.inMinutes != null
+            ? sleep!.duration.inMinutes / 60.0
+            : null;
+        _totalHabits = habits.length;
+        _habitsCompleted = habits.where((h) => h.isCompletedToday).length;
+        _exerciseMinutes =
+            exercises.fold<int>(0, (s, e) => s + e.durationMinutes);
+        _profile = profile;
+        _calorieGoal = profile?.recommendedCalories ?? 2000;
+      });
+      _animController.forward(from: 0);
+    } catch (e) {
+      debugPrint('Error loading dashboard: $e');
+    }
   }
 
   @override
@@ -174,6 +179,7 @@ class _HomeScreenState extends State<HomeScreen>
                     onPressed: () async {
                       await Navigator.push(context,
                           MaterialPageRoute(builder: (_) => const ProfileScreen()));
+                      if (!mounted) return;
                       _loadDashboardData();
                     },
                     icon: CircleAvatar(
@@ -502,6 +508,7 @@ class _HomeScreenState extends State<HomeScreen>
             onTap: () async {
               await Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const ProfileScreen()));
+              if (!mounted) return;
               _loadDashboardData();
             },
           ),
