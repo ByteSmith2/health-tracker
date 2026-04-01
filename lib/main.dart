@@ -7,54 +7,20 @@ import 'firebase_options.dart';
 import 'providers/theme_provider.dart';
 import 'utils/app_theme.dart';
 import 'services/database_service.dart';
+import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/onboarding_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
-  // Sign in anonymously and wait for auth state to be ready
-  try {
-    final userCredential = await FirebaseAuth.instance.signInAnonymously();
-    if (userCredential.user == null) {
-      debugPrint('Firebase auth: user is null after sign in');
-    }
-  } catch (e) {
-    debugPrint('Firebase auth error: $e');
-    // Retry once after a short delay
-    try {
-      await Future.delayed(const Duration(seconds: 2));
-      await FirebaseAuth.instance.signInAnonymously();
-    } catch (e2) {
-      debugPrint('Firebase auth retry failed: $e2');
-    }
-  }
-
-  // Wait until currentUser is available
-  if (FirebaseAuth.instance.currentUser == null) {
-    await FirebaseAuth.instance.authStateChanges().firstWhere((user) => user != null)
-        .timeout(const Duration(seconds: 5), onTimeout: () => null);
-  }
-
   await initializeDateFormatting('vi', null);
 
-  bool hasProfile = false;
-  if (FirebaseAuth.instance.currentUser != null) {
-    try {
-      hasProfile = await DatabaseService.instance.hasProfile();
-    } catch (e) {
-      debugPrint('Profile check error: $e');
-    }
-  }
-
-  runApp(HealthTrackerApp(showOnboarding: !hasProfile));
+  runApp(const HealthTrackerApp());
 }
 
 class HealthTrackerApp extends StatelessWidget {
-  final bool showOnboarding;
-
-  const HealthTrackerApp({super.key, this.showOnboarding = false});
+  const HealthTrackerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -68,12 +34,82 @@ class HealthTrackerApp extends StatelessWidget {
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: themeProvider.themeMode,
-            home: showOnboarding
-                ? const OnboardingScreen()
-                : const HomeScreen(),
+            home: const _AuthGate(),
           );
         },
       ),
+    );
+  }
+}
+
+/// Listens to Firebase auth state and routes accordingly.
+class _AuthGate extends StatelessWidget {
+  const _AuthGate();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // Still loading auth state
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // Not signed in → show auth screen
+        if (snapshot.data == null) {
+          return const AuthScreen();
+        }
+
+        // Signed in → check if profile exists, then show home or onboarding
+        return const _ProfileGate();
+      },
+    );
+  }
+}
+
+/// Checks if the user has a profile and routes to Home or Onboarding.
+class _ProfileGate extends StatefulWidget {
+  const _ProfileGate();
+
+  @override
+  State<_ProfileGate> createState() => _ProfileGateState();
+}
+
+class _ProfileGateState extends State<_ProfileGate> {
+  late Future<bool> _profileFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _profileFuture = _checkProfile();
+  }
+
+  Future<bool> _checkProfile() async {
+    try {
+      return await DatabaseService.instance.hasProfile();
+    } catch (e) {
+      debugPrint('Profile check error: $e');
+      return false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _profileFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final hasProfile = snapshot.data ?? false;
+        return hasProfile ? const HomeScreen() : const OnboardingScreen();
+      },
     );
   }
 }
